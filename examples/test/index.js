@@ -1,13 +1,16 @@
 // 该文件作用：测试core和plugin-error、plugin-behavior的打包与核心机制展示
 
-import { init } from '/@fs/E:/my-pnpm-protect/埋点sdk/packages/core/src/index.ts';
-import { ErrorPlugin } from '/@fs/E:/my-pnpm-protect/埋点sdk/packages/plugin-error/src/index.ts';
-import { BehaviorPlugin } from '/@fs/E:/my-pnpm-protect/埋点sdk/packages/plugin-behavior/src/index.ts';
-
+// import { init } from '/@fs/E:/my-pnpm-protect/埋点sdk/packages/core/src/index.ts';
+// import { ErrorPlugin } from '/@fs/E:/my-pnpm-protect/埋点sdk/packages/plugin-error/src/index.ts';
+// import { BehaviorPlugin } from '/@fs/E:/my-pnpm-protect/埋点sdk/packages/plugin-behavior/src/index.ts';
+import { init } from '@hawk-tracker/core';
+import { ErrorPlugin } from '@hawk-tracker/plugin-error';
+import { BehaviorPlugin } from '@hawk-tracker/plugin-behavior';
 console.log('Initializing Hawk Tracker...');
 
 const hawkTracker = init({
-  dsn: 'https://your-dsn.com',
+  // dsn: 'http://127.0.0.1:3000/api/data',
+  dsn: 'http://localhost:9999/disabled', // 设置为不存在的地址，禁用数据上报
   appName: 'demo-app',
   appCode: 'demo-code',
   appVersion: '1.0.0',
@@ -17,7 +20,21 @@ const hawkTracker = init({
   sendInterval: 5000,
   maxConcurrentRequests: 3,
   offlineStorageKey: 'sdk_report_queue',
-  behavior: { core: true, maxSize: 300, debug: true },
+  // behavior: { core: true, maxSize: 300, debug: true },
+  behavior: { 
+    core: true, 
+    maxSize: 300, 
+    debug: true,
+    click: {
+      enabled: true,
+      ignoreSelectors: ['.no-track', '[data-no-track]'],
+      customAttributes: ['category', 'action', 'value'],
+      beforeSend: (event) => {
+        console.log('点击事件被捕获:', event);
+        return event; // 返回事件继续处理
+      }
+    }
+  },
 });
 
 console.log('Using ErrorPlugin...');

@@ -175,3 +175,104 @@ export function generateUUID(): string {
     return v.toString(16);
   });
 }
+
+/**
+ * 获取元素的CSS选择器路径
+ * @param element 目标元素
+ * @returns CSS选择器路径字符串
+ */
+export function getElementPath(element: Element): string {
+  const path: string[] = [];
+  let current: Element | null = element;
+
+  while (current && current !== document.body) {
+    let selector = current.tagName.toLowerCase();
+    
+    if (current.id) {
+      selector += `#${current.id}`;
+    } else if (current.className) {
+      const classes = Array.from(current.classList).join('.');
+      selector += `.${classes}`;
+    }
+    
+    path.unshift(selector);
+    current = current.parentElement;
+  }
+
+  return path.join(' > ');
+}
+
+/**
+ * 提取元素的自定义属性
+ * @param element 目标元素
+ * @param attributes 要提取的属性名列表
+ * @returns 提取的属性对象
+ */
+export function extractCustomAttributes(element: Element, attributes: string[]): Record<string, any> {
+  const params: Record<string, any> = {};
+
+  attributes.forEach(attr => {
+    const value = element.getAttribute(`data-tracking-${attr}`);
+    if (value !== null) {
+      params[attr] = value;
+    }
+  });
+
+  return params;
+}
+
+/**
+ * 检查元素是否应该被忽略
+ * @param element 目标元素
+ * @param ignoreSelectors 忽略的选择器列表
+ * @returns 是否应该忽略
+ */
+export function isElementIgnored(element: Element, ignoreSelectors: string[]): boolean {
+  if (!ignoreSelectors || ignoreSelectors.length === 0) {
+    return false;
+  }
+
+  return ignoreSelectors.some(selector => {
+    try {
+      return element.matches(selector);
+    } catch (error) {
+      return false;
+    }
+  });
+}
+
+/**
+ * 查找最近的带有data-tracking-event-id属性的祖先元素
+ * @param element 起始元素
+ * @returns 带有tracking属性的元素或null
+ */
+export function findTrackingElement(element: Element): Element | null {
+  let current: Element | null = element;
+
+  while (current) {
+    if (current.hasAttribute('data-tracking-event-id')) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+
+  return null;
+}
+
+/**
+ * 从元素中提取所有data-tracking-*属性
+ * @param element 目标元素
+ * @returns 提取的属性对象
+ */
+export function extractAllTrackingAttributes(element: Element): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  
+  Array.from(element.attributes).forEach(attr => {
+    if (attr.name.startsWith('data-tracking-')) {
+      const key = attr.name.replace('data-tracking-', '');
+      attributes[key] = attr.value;
+    }
+  });
+
+  return attributes;
+}

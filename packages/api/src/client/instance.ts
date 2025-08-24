@@ -24,7 +24,7 @@ const clearAccessToken = () => {
 };
 
 const apiInstance = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: 'http://localhost:/api',
   timeout: 10000,
   withCredentials: true,
 });

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>点击事件控制测试</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+      .tracking-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .tracking-button:hover {
+        background: #0056b3;
+      }
+      .no-track {
+        background: #6c757d;
+      }
+      .no-track:hover {
+        background: #545b62;
+      }
+      .control-panel {
+        background: #e9ecef;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+      .control-panel button {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        margin: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .control-panel button:hover {
+        background: #218838;
+      }
+      .control-panel button.danger {
+        background: #dc3545;
+      }
+      .control-panel button.danger:hover {
+        background: #c82333;
+      }
+      .log-section {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+      .log-section h4 {
+        margin-top: 0;
+        color: #495057;
+      }
+      .log-content {
+        background: #000;
+        color: #00ff00;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+      }
+      .stat-card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+      .stat-label {
+        color: #666;
+        margin-top: 5px;
+      }
+      .nested-element {
+        padding: 10px;
+        border: 1px solid #ccc;
+        margin: 5px;
+        border-radius: 4px;
+      }
+      .custom-attribute {
+        background: #17a2b8;
+      }
+      .custom-attribute:hover {
+        background: #138496;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>点击事件控制功能测试</h1>
+
+      <!-- 控制面板 -->
+      <div class="control-panel">
+        <h3>控制面板</h3>
+        <button onclick="enableClickTracking()">启用点击监控</button>
+        <button onclick="disableClickTracking()" class="danger">
+          禁用点击监控
+        </button>
+        <button onclick="clearLogs()">清空日志</button>
+        <button onclick="runAutomatedTests()">运行自动化测试</button>
+        <span
+          id="tracking-status"
+          style="margin-left: 20px; font-weight: bold; color: #28a745"
+        >
+          状态: 已启用
+        </span>
+      </div>
+
+      <!-- 测试区域 -->
+      <div class="test-section">
+        <h3>基础点击测试</h3>
+        <button
+          class="tracking-button"
+          data-tracking-event-id="btn-1"
+          data-tracking-title="基础按钮1"
+        >
+          基础按钮1
+        </button>
+        <button
+          class="tracking-button"
+          data-tracking-event-id="btn-2"
+          data-tracking-title="基础按钮2"
+        >
+          基础按钮2
+        </button>
+        <button
+          class="tracking-button no-track"
+          data-tracking-event-id="btn-ignored"
+        >
+          被忽略的按钮
+        </button>
+      </div>
+
+      <div class="test-section">
+        <h3>自定义属性测试</h3>
+        <button
+          class="tracking-button custom-attribute"
+          data-tracking-event-id="custom-btn"
+          data-tracking-title="自定义属性按钮"
+          data-category="test"
+          data-action="click"
+          data-value="custom"
+        >
+          自定义属性按钮
+        </button>
+      </div>
+
+      <div class="test-section">
+        <h3>嵌套元素测试</h3>
+        <div class="nested-element">
+          <span>外层元素</span>
+          <div class="nested-element">
+            <button
+              class="tracking-button"
+              data-tracking-event-id="nested-btn"
+              data-tracking-title="嵌套按钮"
+            >
+              嵌套按钮
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>无埋点元素测试</h3>
+        <button class="no-track">普通按钮（无埋点）</button>
+        <div data-no-track>
+          <button
+            class="tracking-button"
+            data-tracking-event-id="no-track-parent"
+          >
+            父元素被忽略的按钮
+          </button>
+        </div>
+      </div>
+
+      <!-- 统计信息 -->
+      <div class="test-section">
+        <h3>统计信息</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="total-clicks">0</div>
+            <div class="stat-label">总点击次数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="tracked-clicks">0</div>
+            <div class="stat-label">已监控点击</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="ignored-clicks">0</div>
+            <div class="stat-label">被忽略点击</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="behavior-stack-size">0</div>
+            <div class="stat-label">行为栈大小</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 日志显示 -->
+      <div class="log-section">
+        <h4>事件日志</h4>
+        <div class="log-content" id="event-log"></div>
+      </div>
+
+      <div class="log-section">
+        <h4>行为栈快照</h4>
+        <div class="log-content" id="behavior-snapshot"></div>
+      </div>
+
+      <div class="log-section">
+        <h4>自动化测试结果</h4>
+        <div class="log-content" id="test-results"></div>
+      </div>
+    </div>
+
+    <script type="module" src="click-event-test.js"></script>
+  </body>
+</html>

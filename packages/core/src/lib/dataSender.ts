@@ -32,6 +32,10 @@ interface SenderConfig {
   maxRetry?: number;
   backoffBaseMs?: number;
   backoffMaxMs?: number;
+  // 新增点击事件相关配置
+  cacheMaxLength?: number;
+  cacheWaitingTime?: number;
+  appName?: string; // 添加应用名称
 }
 
 export class DataSender {
@@ -66,6 +70,10 @@ export class DataSender {
       maxRetry: config.maxRetry ?? 5,
       backoffBaseMs: config.backoffBaseMs ?? 1000,
       backoffMaxMs: config.backoffMaxMs ?? 30000,
+        // 新增配置项
+      cacheMaxLength: config.cacheMaxLength ?? 10,
+      cacheWaitingTime: config.cacheWaitingTime ?? 100,
+      appName: config.appName ?? 'unknown-app',
     } as Required<SenderConfig>;
 
     if (this.config.debug) {
@@ -377,5 +385,75 @@ export class DataSender {
       // IP 和会话 ID 等通常在后端通过请求头获取，前端无法直接获取
       // 这里可以放置会话 ID 或其他客户端信息
     };
+  }
+  
+
+  /**
+   * 点击事件缓存
+   */
+  private clickEventCache: any[] = [];
+  private clickEventTimer: NodeJS.Timeout | null = null;
+
+  /**
+   * 发送点击事件数据
+   * @param clickEvent 点击事件数据
+   */
+  sendClickEvent(clickEvent: any): void {
+    this.clickEventCache.push(clickEvent);
+
+    // 如果缓存达到最大长度，立即发送
+    if (this.clickEventCache.length >= (this.config.cacheMaxLength || 10)) {
+      this.sendClickEventBatch();
+    } else if (!this.clickEventTimer) {
+      // 否则设置定时器延迟发送
+      this.clickEventTimer = setTimeout(() => {
+        this.sendClickEventBatch();
+      }, this.config.cacheWaitingTime || 100);
+    }
+  }
+
+  /**
+   * 发送批量点击事件数据
+   */
+  private async sendClickEventBatch(): Promise<void> {
+    if (this.clickEventCache.length === 0) return;
+
+    const events = [...this.clickEventCache];
+    this.clickEventCache = [];
+
+    if (this.clickEventTimer) {
+      clearTimeout(this.clickEventTimer);
+      this.clickEventTimer = null;
+    }
+
+    try {
+      const response = await fetch(this.config.dsn, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appName: this.config.appName,
+          events,
+          timestamp: Date.now(),
+          type: 'click_events',
+        }),
+      });
+
+      const success = response.ok;
+      
+      if (this.config.debug) {
+        console.log('Click tracking data sent:', { success, events });
+      }
+    } catch (error) {
+      console.error('Failed to send click tracking data:', error);
+    }
+  }
+
+  /**
+   * 强制发送点击事件缓存数据
+   */
+  flushClickEvents(): void {
+    this.sendClickEventBatch();
   }
 }

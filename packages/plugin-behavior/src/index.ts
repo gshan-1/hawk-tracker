@@ -12,6 +12,7 @@ import {
 export class BehaviorPlugin extends BasePlugin {
   private behaviorStack!: BehaviorStack;
   private globalTracker: any;
+  private clickEnabled: boolean = true;
 
   constructor(
     options: {
@@ -19,17 +20,23 @@ export class BehaviorPlugin extends BasePlugin {
       maxSize?: number;
       maxAge?: number;
       debug?: boolean;
+      enableClick?: boolean; // 是否启用点击事件监控
     } = {},
   ) {
     super(SEND_TYPES.BEHAVIOR);
 
     // 获取全局跟踪器实例
     this.globalTracker = getGlobalHawkTracker();
+    // 设置点击事件控制
+    this.clickEnabled = options.enableClick !== false; // 默认启用
 
     if (!this.globalTracker) {
       console.error('[BehaviorPlugin] 全局跟踪器未初始化');
       return;
     }
+
+    // 设置点击事件控制
+    this.clickEnabled = options.enableClick !== false; // 默认启用
 
     // 创建或获取专用的行为栈
     this.behaviorStack = this.globalTracker.createBehaviorStack(
@@ -43,6 +50,7 @@ export class BehaviorPlugin extends BasePlugin {
 
     console.log('[BehaviorPlugin] 初始化完成', {
       stackName: this.behaviorStack.getName(),
+      clickEnabled: this.clickEnabled,
       config: {
         maxSize: options.maxSize ?? 200,
         maxAge: options.maxAge ?? 5 * 60 * 1000,
@@ -54,12 +62,18 @@ export class BehaviorPlugin extends BasePlugin {
   install(core: any) {
     console.log('[BehaviorPlugin] 安装插件');
 
-    // 订阅各种事件类型
-    core.eventCenter.subscribeEvent({
-      type: LISTEN_TYPES.CLICK,
-      callback: this.handleClickEvent.bind(this),
-    });
+    // 根据配置决定是否订阅点击事件
+    if (this.clickEnabled) {
+      core.eventCenter.subscribeEvent({
+        type: LISTEN_TYPES.CLICK,
+        callback: this.handleClickEvent.bind(this),
+      });
+      console.log('[BehaviorPlugin] 点击事件监控已启用');
+    } else {
+      console.log('[BehaviorPlugin] 点击事件监控已禁用');
+    }
 
+    // 订阅其他事件类型
     core.eventCenter.subscribeEvent({
       type: LISTEN_TYPES.LOAD,
       callback: this.handlePageLoadEvent.bind(this),
@@ -117,6 +131,8 @@ export class BehaviorPlugin extends BasePlugin {
    * 处理点击事件
    */
   private handleClickEvent(event: MouseEvent) {
+    if (!this.clickEnabled) return;
+
     const target = event.target as HTMLElement;
     if (!target) return;
 
@@ -268,6 +284,29 @@ export class BehaviorPlugin extends BasePlugin {
     if (event.type === 'popstate') return 'popstate';
     if (event.type === 'hashchange') return 'hashchange';
     return 'pushState';
+  }
+
+  /**
+   * 启用点击事件监控
+   */
+  public enableClickTracking(): void {
+    this.clickEnabled = true;
+    console.log('[BehaviorPlugin] 点击事件监控已启用');
+  }
+
+  /**
+   * 禁用点击事件监控
+   */
+  public disableClickTracking(): void {
+    this.clickEnabled = false;
+    console.log('[BehaviorPlugin] 点击事件监控已禁用');
+  }
+
+  /**
+   * 检查点击事件监控状态
+   */
+  public isClickTrackingEnabled(): boolean {
+    return this.clickEnabled;
   }
 
   /**

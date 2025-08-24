@@ -10,10 +10,18 @@ import {
   hasGlobalProperty,
   createEventStorage,
   createOriginalMethodsStorage,
+  // 添加DOM工具函数
+  getElementPath,
+  extractCustomAttributes,
+  isElementIgnored,
+  findTrackingElement,
+  extractAllTrackingAttributes,
 } from '../utils/common';
 import { LISTEN_TYPES } from '../common/event';
 import { eventCenter } from './eventCenter';
 import debug from '../utils/debug';
+import { getConfig } from '../common/config';
+import { ClickEvent } from '../types/options';
 
 // 存储原始方法，用于恢复
 const originalMethods = createOriginalMethodsStorage<
@@ -53,12 +61,89 @@ function createEventListener(
 ): void {
   if (!target || !('addEventListener' in target)) return;
 
-  const handler = function (event: Event) {
-    eventCenter.emit(type, event);
-  };
+  // const handler = function (event: Event) {
+    const handler = function (event: Event) {
+      // 特殊处理点击事件
+      if (type === LISTEN_TYPES.CLICK) {
+        const mouseEvent = event as MouseEvent;
+        const target = mouseEvent.target as Element;
+        
+        if (!target) {
+          eventCenter.emit(type, event);
+          return;
+        }
+  
+        const config = getConfig();
+        const clickConfig = config.behavior?.click;
+  
+        // 检查是否启用点击事件监控
+        if (clickConfig?.enabled === false) {
+          return;
+        }
+  
+        // 检查是否被忽略
+        if (clickConfig?.ignoreSelectors && isElementIgnored(target, clickConfig.ignoreSelectors)) {
+          return;
+        }
+  
+        // 查找带有tracking属性的元素
+        const trackingElement = findTrackingElement(target);
+        if (!trackingElement) {
+          // 如果没有找到tracking元素，仍然发送原始事件
+          eventCenter.emit(type, event);
+          return;
+        }
+  
+        // 检查是否有埋点属性
+        const eventId = trackingElement.getAttribute('data-tracking-event-id');
+        if (!eventId) {
+          eventCenter.emit(type, event);
+          return;
+        }
+  
+        // 构建增强的点击事件数据
+        const enhancedEvent: ClickEvent = {
+          eventId,
+          title: trackingElement.getAttribute('data-tracking-title') || undefined,
+          eventType: 'click',
+          params: {
+            ...extractCustomAttributes(trackingElement, clickConfig?.customAttributes || []),
+            ...extractAllTrackingAttributes(trackingElement),
+          },
+          triggerPageUrl: window.location.href,
+          triggerTime: Date.now(),
+          elementPath: getElementPath(trackingElement),
+          x: mouseEvent.clientX,
+          y: mouseEvent.clientY,
+          elementId: trackingElement.id || undefined,
+        };
+  
+        // 执行beforeSend钩子
+        let finalEvent = enhancedEvent;
+        if (clickConfig?.beforeSend) {
+          const result = clickConfig.beforeSend(enhancedEvent);
+          if (result === null) {
+            return; // 被过滤掉
+          }
+          finalEvent = result;
+        }
+  
+        // 发送增强的事件数据
+        eventCenter.emit(type, finalEvent);
+      } else {
+        // 其他事件类型的默认处理
+        eventCenter.emit(type, event);
+      }
+    };
+    // eventCenter.emit(type, event);
+ 
+
+
 
   // 这行代码的作用是将事件处理函数 handler 存储到 eventHandlers 对象中，key 为 eventName，方便后续移除事件监听器时能准确找到对应的 handler。
   eventHandlers[eventName as keyof typeof eventHandlers] = handler;
+
+
 
   debug.logDebug('createEventListener xxxxx', {
     target,
@@ -465,3 +550,67 @@ export function getSupportedListenerTypes(): LISTEN_TYPES[] {
     isListenerSupported(type),
   );
 }
+
+// 点击事件控制相关函数
+
+/**
+ * 启用点击事件监控
+ */
+export function enableClickTracking(): void {
+  const config = getConfig();
+  
+  // 检查是否已经在禁用列表中
+  const disabledListeners = config.behavior?.listeners?.disabled || [];
+  const clickIndex = disabledListeners.indexOf(LISTEN_TYPES.CLICK);
+  
+  if (clickIndex > -1) {
+    disabledListeners.splice(clickIndex, 1);
+  }
+  
+  // 重新初始化点击事件监听器
+  if (hasGlobalProperty('document') && hasGlobalProperty('addEventListener')) {
+    createEventListener(LISTEN_TYPES.CLICK, 'click', _global.document, true);
+  }
+}
+
+/**
+ * 禁用点击事件监控
+ */
+export function disableClickTracking(): void {
+  // 移除点击事件监听器
+  removeEventListener('click', _global.document, true);
+  
+  // 将点击事件添加到禁用列表
+  const config = getConfig();
+  if (!config.behavior?.listeners?.disabled) {
+    config.behavior = config.behavior || {};
+    config.behavior.listeners = config.behavior.listeners || {};
+    config.behavior.listeners.disabled = [];
+  }
+  
+  if (!config.behavior.listeners.disabled.includes(LISTEN_TYPES.CLICK)) {
+    config.behavior.listeners.disabled.push(LISTEN_TYPES.CLICK);
+  }
+}
+
+/**
+ * 检查点击事件监控状态
+ */
+export function isClickTrackingEnabled(): boolean {
+  const config = getConfig();
+  
+  // 检查是否被禁用
+  if (config.behavior?.click?.enabled === false) {
+    return false;
+  }
+  
+  // 检查是否在禁用列表中
+  const disabledListeners = config.behavior?.listeners?.disabled || [];
+  if (disabledListeners.includes(LISTEN_TYPES.CLICK)) {
+    return false;
+  }
+  
+  return true;
+}
+
+

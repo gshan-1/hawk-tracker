@@ -2,8 +2,8 @@
   "extends": "@workspace/typescript-config/react-library.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "../core/src",
     "baseUrl": ".",
+    "forceConsistentCasingInFileNames": true,
     "paths": {
       "@hawk-tracker/core": ["../core/src/index.ts"],
       "@hawk-tracker/core/*": ["../core/src/*"]

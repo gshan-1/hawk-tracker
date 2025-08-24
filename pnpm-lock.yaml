@@ -230,6 +230,9 @@ importers:
       '@hawk-tracker/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@hawk-tracker/plugin-behavior':
+        specifier: workspace:*
+        version: link:../../packages/plugin-behavior
       '@hawk-tracker/plugin-error':
         specifier: workspace:*
         version: link:../../packages/plugin-error
@@ -351,6 +354,25 @@ importers:
       '@types/node':
         specifier: ^24.2.1
         version: 24.2.1
+      '@workspace/build-config':
+        specifier: workspace:*
+        version: link:../config/build-config
+      '@workspace/eslint-config':
+        specifier: workspace:*
+        version: link:../config/eslint-config
+      '@workspace/typescript-config':
+        specifier: workspace:*
+        version: link:../config/typescript-config
+      rollup:
+        specifier: ^4.46.2
+        version: 4.46.2
+
+  packages/plugin-behavior:
+    dependencies:
+      '@hawk-tracker/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
       '@workspace/build-config':
         specifier: workspace:*
         version: link:../config/build-config
