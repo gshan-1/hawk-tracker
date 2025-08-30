@@ -94,7 +94,7 @@ export class DataSender {
     if (this.config.debug) {
       this.log = log;
     } else {
-      this.log = () => {};
+      this.log = () => { };
     }
 
     // 初始化时从本地存储恢复数据

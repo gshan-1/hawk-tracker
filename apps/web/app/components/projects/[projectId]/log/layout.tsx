@@ -4,7 +4,15 @@ import { MockAPI, Project } from '../../../../api/mockAPI';
 
 export default function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
-  const location = useLocation();
+
+  // 检查是否在Router上下文中
+  let location;
+  try {
+    location = useLocation();
+  } catch (error) {
+    // 如果不在Router上下文中，使用默认值
+    location = { pathname: window.location.pathname };
+  }
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -12,7 +20,7 @@ export default function ProjectLayout() {
   useEffect(() => {
     const fetchProject = async () => {
       if (!projectId) return;
-      
+
       try {
         const projectData = await MockAPI.getProject(projectId);
         setProject(projectData);
@@ -31,7 +39,7 @@ export default function ProjectLayout() {
     { path: `/projects/${projectId}/overview`, label: '概览', icon: '' },
     { path: `/projects/${projectId}/errors-log`, label: '错误日志', icon: '❌' },
     { path: `/projects/${projectId}/performance`, label: '性能日志', icon: '⚡' },
-    { path: `/projects/${projectId}/users`, label: '用户日志', icon: '' },
+    { path: `/projects/${projectId}/users`, label: '用户日志', icon: '👩‍💻' },
     { path: `/projects/${projectId}/custom`, label: '自定义埋点', icon: '' },
   ];
 
@@ -57,11 +65,10 @@ export default function ProjectLayout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
                   >
                     <span className="mr-3">{item.icon}</span>
                     {item.label}
