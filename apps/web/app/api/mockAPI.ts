@@ -66,6 +66,99 @@ export interface ErrorDetail {
   recordingId: string;
 }
 
+// 新增：性能监控数据接口
+export interface PerformanceMetric {
+  id: string;
+  timestamp: string;
+  type: 'navigation' | 'dom_ready' | 'web_vitals' | 'resource' | 'long_task';
+  // 核心性能数据
+  loadTime?: number;
+  domContentLoaded?: number;
+  firstPaint?: number;
+  firstContentfulPaint?: number;
+  timeToFirstByte?: number; // TTFB
+  // 交互性能数据
+  firstInputDelay?: number; // FID
+  interactionToNextPaint?: number; // INP
+  totalBlockingTime?: number; // TBT
+  cumulativeLayoutShift?: number; // CLS
+  // 网络性能数据
+  dnsTime?: number;
+  tcpTime?: number;
+  requestTime?: number;
+  redirectTime?: number;
+  unloadTime?: number;
+  secureConnectionTime?: number;
+  // DOM相关性能数据
+  domParseTime?: number;
+  domReadyTime?: number;
+  firstScreenTime?: number; // 首屏加载时间
+  whiteScreenTime?: number; // 白屏时间
+  // 资源加载性能数据
+  resourceLoadTime?: number; // 资源加载时间
+  // 长任务数据
+  longTaskCount?: number; // 长任务数量
+  longTaskDuration?: number; // 长任务总时间
+  // Web Vitals 数据
+  metric?: 'LCP' | 'FID' | 'CLS' | 'INP' | 'TBT';
+  value?: number;
+  element?: string;
+  // 资源数据
+  name?: string;
+  duration?: number;
+  transferSize?: number;
+  initiatorType?: string;
+  startTime?: number;
+  responseEnd?: number;
+  // 页面信息
+  pageUrl?: string;
+  userAgent?: string;
+}
+
+export interface PerformanceSummary {
+  totalMetrics: number;
+  averageLoadTime: number;
+  averageDomContentLoaded: number;
+  averageFirstPaint: number;
+  averageFirstContentfulPaint: number;
+  averageTimeToFirstByte: number;
+  // 核心性能指标
+  coreMetrics: {
+    fp: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // FP - 首次绘制
+    fcp: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // FCP - 首次内容绘制
+    lcp: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // LCP - 最大内容绘制
+    ttfb: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // TTFB - 首字节时间
+  };
+  // 交互性能指标
+  interactionMetrics: {
+    inp: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // INP - 交互到下次绘制
+    tbt: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // TBT - 总阻塞时间
+    cls: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // CLS - 累积布局偏移
+  };
+  // 补充性能指标
+  supplementaryMetrics: {
+    dns: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // DNS解析时间
+    tcp: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // TCP连接时间
+    dom: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // DOM解析时间
+    firstScreen: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // 首屏加载时间
+    whiteScreen: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // 白屏时间
+    resourceLoad: { value: number; rating: 'good' | 'needs-improvement' | 'poor' }; // 资源加载时间
+    longTask: { count: number; duration: number; rating: 'good' | 'needs-improvement' | 'poor' }; // 长任务
+  };
+  webVitals: {
+    lcp: { value: number; rating: 'good' | 'needs-improvement' | 'poor' };
+    fid: { value: number; rating: 'good' | 'needs-improvement' | 'poor' };
+    cls: { value: number; rating: 'good' | 'needs-improvement' | 'poor' };
+    inp: { value: number; rating: 'good' | 'needs-improvement' | 'poor' };
+    tbt: { value: number; rating: 'good' | 'needs-improvement' | 'poor' };
+  };
+  resourceStats: {
+    totalResources: number;
+    totalBytes: number;
+    byType: Record<string, { count: number; bytes: number }>;
+  };
+}
+
 // 模拟数据库 - 项目信息
 const mockProjects: Record<string, Project> = {
   'project-1': {
@@ -316,6 +409,145 @@ const mockErrorDetails: Record<string, ErrorDetail> = {
   },
 };
 
+// 新增：模拟数据库 - 性能监控数据
+let mockPerformanceMetrics: Record<string, PerformanceMetric[]> = {
+  'project-1': [
+    {
+      id: 'perf-1',
+      timestamp: '2024-01-15 10:30:25',
+      type: 'navigation',
+      loadTime: 1200,
+      domContentLoaded: 800,
+      firstPaint: 450,
+      firstContentfulPaint: 520,
+      timeToFirstByte: 180,
+      firstInputDelay: 85,
+      interactionToNextPaint: 120,
+      totalBlockingTime: 250,
+      cumulativeLayoutShift: 0.05,
+      dnsTime: 120,
+      tcpTime: 80,
+      requestTime: 300,
+      domParseTime: 200,
+      domReadyTime: 100,
+      firstScreenTime: 800,
+      whiteScreenTime: 200,
+      resourceLoadTime: 350,
+      longTaskCount: 2,
+      longTaskDuration: 150,
+      redirectTime: 0,
+      unloadTime: 15,
+      secureConnectionTime: 60,
+      pageUrl: 'https://example.com/user/login',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    },
+    {
+      id: 'perf-2',
+      timestamp: '2024-01-15 10:31:15',
+      type: 'web_vitals',
+      metric: 'LCP',
+      value: 2400,
+      element: 'IMG',
+      pageUrl: 'https://example.com/user/dashboard',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    },
+    {
+      id: 'perf-3',
+      timestamp: '2024-01-15 10:31:30',
+      type: 'web_vitals',
+      metric: 'FID',
+      value: 85,
+      element: 'BUTTON',
+      pageUrl: 'https://example.com/user/profile',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    },
+    {
+      id: 'perf-4',
+      timestamp: '2024-01-15 10:32:00',
+      type: 'resource',
+      name: 'https://example.com/static/app.js',
+      duration: 150,
+      transferSize: 245760,
+      initiatorType: 'script',
+      startTime: 1000,
+      responseEnd: 1150,
+      pageUrl: 'https://example.com/user/login',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+  ],
+  'project-2': [
+    {
+      id: 'perf-5',
+      timestamp: '2024-01-15 11:15:30',
+      type: 'navigation',
+      loadTime: 1800,
+      domContentLoaded: 1200,
+      firstPaint: 680,
+      firstContentfulPaint: 750,
+      timeToFirstByte: 320,
+      firstInputDelay: 150,
+      interactionToNextPaint: 200,
+      totalBlockingTime: 400,
+      cumulativeLayoutShift: 0.15,
+      dnsTime: 80,
+      tcpTime: 120,
+      requestTime: 450,
+      domParseTime: 350,
+      domReadyTime: 200,
+      firstScreenTime: 1100,
+      whiteScreenTime: 350,
+      resourceLoadTime: 520,
+      longTaskCount: 3,
+      longTaskDuration: 280,
+      redirectTime: 50,
+      unloadTime: 20,
+      secureConnectionTime: 90,
+      pageUrl: 'https://example.com/product/list',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    },
+    {
+      id: 'perf-6',
+      timestamp: '2024-01-15 11:16:45',
+      type: 'web_vitals',
+      metric: 'CLS',
+      value: 0.25,
+      pageUrl: 'https://example.com/product/detail/123',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    }
+  ],
+  'project-3': [
+    {
+      id: 'perf-7',
+      timestamp: '2024-01-15 14:20:10',
+      type: 'navigation',
+      loadTime: 950,
+      domContentLoaded: 650,
+      firstPaint: 320,
+      firstContentfulPaint: 380,
+      timeToFirstByte: 120,
+      firstInputDelay: 45,
+      interactionToNextPaint: 80,
+      totalBlockingTime: 150,
+      cumulativeLayoutShift: 0.02,
+      dnsTime: 50,
+      tcpTime: 60,
+      requestTime: 200,
+      domParseTime: 150,
+      domReadyTime: 80,
+      firstScreenTime: 600,
+      whiteScreenTime: 150,
+      resourceLoadTime: 280,
+      longTaskCount: 1,
+      longTaskDuration: 80,
+      redirectTime: 0,
+      unloadTime: 10,
+      secureConnectionTime: 45,
+      pageUrl: 'https://example.com/employee/dashboard',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+  ]
+};
+
 // 新增：模拟录屏数据
 const mockRecordings: Record<string, any> = {
   'recording-001': {
@@ -476,8 +708,14 @@ export class MockAPI {
 
     // 更新事件
     const updatedEvent: TrackingEvent = {
-      ...events[eventIndex],
       ...eventData,
+      ...events[eventIndex],
+      // 再次展开 eventData 以确保更新的字段覆盖原有字段（除了id和createdAt）
+      name: eventData.name,
+      description: eventData.description,
+      type: eventData.type,
+      identifier: eventData.identifier,
+      status: eventData.status,
     };
 
     events[eventIndex] = updatedEvent;
@@ -598,5 +836,262 @@ export class MockAPI {
   static async getRecording(recordingId: string): Promise<any> {
     await delay(300);
     return mockRecordings[recordingId] || null;
+  }
+
+  // 新增：获取性能监控数据
+  static async getPerformanceMetrics(projectId: string): Promise<PerformanceMetric[]> {
+    await delay(500); // 模拟网络延迟
+
+    const metrics = mockPerformanceMetrics[projectId];
+    if (!metrics) {
+      return [];
+    }
+
+    return metrics;
+  }
+
+  // 新增：添加性能监控数据
+  static async addPerformanceMetric(
+    projectId: string,
+    metric: Omit<PerformanceMetric, 'id'>
+  ): Promise<PerformanceMetric> {
+    await delay(300); // 模拟网络延迟
+
+    if (!mockPerformanceMetrics[projectId]) {
+      mockPerformanceMetrics[projectId] = [];
+    }
+
+    const newMetric: PerformanceMetric = {
+      id: `perf-${Date.now()}`,
+      ...metric
+    };
+
+    mockPerformanceMetrics[projectId].unshift(newMetric); // 添加到开头
+
+    return newMetric;
+  }
+
+  // 新增：获取性能摘要数据
+  static async getPerformanceSummary(projectId: string): Promise<PerformanceSummary> {
+    await delay(400); // 模拟网络延迟
+
+    const metrics = mockPerformanceMetrics[projectId] || [];
+    
+    const navigationMetrics = metrics.filter(m => m.type === 'navigation');
+    const webVitalsMetrics = metrics.filter(m => m.type === 'web_vitals');
+    const resourceMetrics = metrics.filter(m => m.type === 'resource');
+
+    // 评级函数
+    const getRating = (value: number, good: number, poor: number): 'good' | 'needs-improvement' | 'poor' => {
+      if (value <= good) return 'good';
+      if (value <= poor) return 'needs-improvement';
+      return 'poor';
+    };
+
+    // 计算基础性能指标平均值
+    const avgLoadTime = navigationMetrics.length > 0 
+      ? navigationMetrics.reduce((sum, m) => sum + (m.loadTime || 0), 0) / navigationMetrics.length 
+      : 0;
+    
+    const avgDomContentLoaded = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.domContentLoaded || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgFirstPaint = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.firstPaint || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgFirstContentfulPaint = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.firstContentfulPaint || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgTimeToFirstByte = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.timeToFirstByte || 0), 0) / navigationMetrics.length
+      : 0;
+
+    // 计算交互性能指标平均值
+    const avgInteractionToNextPaint = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.interactionToNextPaint || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgTotalBlockingTime = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.totalBlockingTime || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgCumulativeLayoutShift = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.cumulativeLayoutShift || 0), 0) / navigationMetrics.length
+      : 0;
+
+    // 计算补充性能指标平均值
+    const avgDnsTime = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.dnsTime || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgTcpTime = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.tcpTime || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgDomParseTime = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.domParseTime || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgFirstScreenTime = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.firstScreenTime || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgWhiteScreenTime = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.whiteScreenTime || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const avgResourceLoadTime = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.resourceLoadTime || 0), 0) / navigationMetrics.length
+      : 0;
+
+    const totalLongTaskCount = navigationMetrics.reduce((sum, m) => sum + (m.longTaskCount || 0), 0);
+    const avgLongTaskDuration = navigationMetrics.length > 0
+      ? navigationMetrics.reduce((sum, m) => sum + (m.longTaskDuration || 0), 0) / navigationMetrics.length
+      : 0;
+
+    // 计算 Web Vitals
+    const lcpMetrics = webVitalsMetrics.filter(m => m.metric === 'LCP');
+    const fidMetrics = webVitalsMetrics.filter(m => m.metric === 'FID');
+    const clsMetrics = webVitalsMetrics.filter(m => m.metric === 'CLS');
+    const inpMetrics = webVitalsMetrics.filter(m => m.metric === 'INP');
+    const tbtMetrics = webVitalsMetrics.filter(m => m.metric === 'TBT');
+
+    const avgLcp = lcpMetrics.length > 0 
+      ? lcpMetrics.reduce((sum, m) => sum + (m.value || 0), 0) / lcpMetrics.length 
+      : Math.round(avgFirstContentfulPaint * 1.5); // 如果没有LCP数据，估算值
+
+    const avgFid = fidMetrics.length > 0 
+      ? fidMetrics.reduce((sum, m) => sum + (m.value || 0), 0) / fidMetrics.length 
+      : 0;
+
+    const avgClsFromWebVitals = clsMetrics.length > 0 
+      ? clsMetrics.reduce((sum, m) => sum + (m.value || 0), 0) / clsMetrics.length 
+      : avgCumulativeLayoutShift;
+
+    const avgInp = inpMetrics.length > 0 
+      ? inpMetrics.reduce((sum, m) => sum + (m.value || 0), 0) / inpMetrics.length 
+      : avgInteractionToNextPaint;
+
+    const avgTbt = tbtMetrics.length > 0 
+      ? tbtMetrics.reduce((sum, m) => sum + (m.value || 0), 0) / tbtMetrics.length 
+      : avgTotalBlockingTime;
+
+    // 计算资源统计
+    const totalBytes = resourceMetrics.reduce((sum, m) => sum + (m.transferSize || 0), 0);
+    const byType: Record<string, { count: number; bytes: number }> = {};
+    
+    resourceMetrics.forEach(m => {
+      const type = m.initiatorType || 'unknown';
+      if (!byType[type]) {
+        byType[type] = { count: 0, bytes: 0 };
+      }
+      byType[type].count++;
+      byType[type].bytes += m.transferSize || 0;
+    });
+
+    return {
+      totalMetrics: metrics.length,
+      averageLoadTime: Math.round(avgLoadTime),
+      averageDomContentLoaded: Math.round(avgDomContentLoaded),
+      averageFirstPaint: Math.round(avgFirstPaint),
+      averageFirstContentfulPaint: Math.round(avgFirstContentfulPaint),
+      averageTimeToFirstByte: Math.round(avgTimeToFirstByte),
+      // 核心性能指标
+      coreMetrics: {
+        fp: { 
+          value: Math.round(avgFirstPaint), 
+          rating: getRating(avgFirstPaint, 1000, 3000)
+        },
+        fcp: { 
+          value: Math.round(avgFirstContentfulPaint), 
+          rating: getRating(avgFirstContentfulPaint, 1800, 3000)
+        },
+        lcp: { 
+          value: Math.round(avgLcp), 
+          rating: getRating(avgLcp, 2500, 4000)
+        },
+        ttfb: { 
+          value: Math.round(avgTimeToFirstByte), 
+          rating: getRating(avgTimeToFirstByte, 800, 1800)
+        }
+      },
+      // 交互性能指标
+      interactionMetrics: {
+        inp: { 
+          value: Math.round(avgInp), 
+          rating: getRating(avgInp, 200, 500)
+        },
+        tbt: { 
+          value: Math.round(avgTbt), 
+          rating: getRating(avgTbt, 200, 600)
+        },
+        cls: { 
+          value: Math.round(avgClsFromWebVitals * 1000) / 1000, 
+          rating: getRating(avgClsFromWebVitals, 0.1, 0.25)
+        }
+      },
+      // 补充性能指标
+      supplementaryMetrics: {
+        dns: { 
+          value: Math.round(avgDnsTime), 
+          rating: getRating(avgDnsTime, 100, 300)
+        },
+        tcp: { 
+          value: Math.round(avgTcpTime), 
+          rating: getRating(avgTcpTime, 100, 300)
+        },
+        dom: { 
+          value: Math.round(avgDomParseTime), 
+          rating: getRating(avgDomParseTime, 200, 500)
+        },
+        firstScreen: { 
+          value: Math.round(avgFirstScreenTime), 
+          rating: getRating(avgFirstScreenTime, 1000, 2000)
+        },
+        whiteScreen: { 
+          value: Math.round(avgWhiteScreenTime), 
+          rating: getRating(avgWhiteScreenTime, 200, 500)
+        },
+        resourceLoad: { 
+          value: Math.round(avgResourceLoadTime), 
+          rating: getRating(avgResourceLoadTime, 300, 800)
+        },
+        longTask: { 
+          count: totalLongTaskCount, 
+          duration: Math.round(avgLongTaskDuration), 
+          rating: getRating(totalLongTaskCount, 2, 5)
+        }
+      },
+      webVitals: {
+        lcp: { 
+          value: Math.round(avgLcp), 
+          rating: getRating(avgLcp, 2500, 4000)
+        },
+        fid: { 
+          value: Math.round(avgFid), 
+          rating: getRating(avgFid, 100, 300)
+        },
+        cls: { 
+          value: Math.round(avgClsFromWebVitals * 1000) / 1000, 
+          rating: getRating(avgClsFromWebVitals, 0.1, 0.25)
+        },
+        inp: { 
+          value: Math.round(avgInp), 
+          rating: getRating(avgInp, 200, 500)
+        },
+        tbt: { 
+          value: Math.round(avgTbt), 
+          rating: getRating(avgTbt, 200, 600)
+        }
+      },
+      resourceStats: {
+        totalResources: resourceMetrics.length,
+        totalBytes,
+        byType
+      }
+    };
   }
 }
