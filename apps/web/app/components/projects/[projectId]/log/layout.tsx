@@ -11,7 +11,7 @@ export default function ProjectLayout() {
   useEffect(() => {
     const fetchProject = async () => {
       if (!projectId) return;
-      
+
       try {
         const projectData = await MockAPI.getProject(projectId);
         setProject(projectData);
@@ -30,7 +30,7 @@ export default function ProjectLayout() {
     { path: `/projects/${projectId}/overview`, label: '概览', icon: '' },
     { path: `/projects/${projectId}/errors-log`, label: '错误日志', icon: '❌' },
     { path: `/projects/${projectId}/performance`, label: '性能日志', icon: '⚡' },
-    { path: `/projects/${projectId}/users`, label: '用户日志', icon: '' },
+    { path: `/projects/${projectId}/users`, label: '用户日志', icon: '👩‍💻' },
     { path: `/projects/${projectId}/custom`, label: '自定义埋点', icon: '' },
   ];
 
@@ -55,9 +55,8 @@ export default function ProjectLayout() {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`
                   }
                 >

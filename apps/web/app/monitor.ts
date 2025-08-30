@@ -16,11 +16,11 @@ const monitorConfig = {
   sampleRate: 1.0, // 采样率 100%
 
   // 数据发送配置
-  batchSize: 1, // 批量上报大小 - 临时改为1，立即上报
-  sendInterval: 200, // 上报间隔 - 临时改为1秒
-  maxRetry: 2, // 最大重试次数
-  backoffBaseMs: 500, // 退避基础时间
-  backoffMaxMs: 3000, // 退避最大时间
+  batchSize: 10, // 批量上报大小
+  sendInterval: 5000, // 上报间隔 5秒
+  maxRetry: 3, // 最大重试次数
+  backoffBaseMs: 1000, // 退避基础时间
+  backoffMaxMs: 10000, // 退避最大时间
   maxConcurrentRequests: 3, // 最大并发请求数
   offlineStorageKey: 'hawk_tracker_queue', // 离线存储键名
 
@@ -159,7 +159,7 @@ export function initMonitor() {
       stackName: 'user_behavior',
       maxSize: 200,
       maxAge: 5 * 60 * 1000,
-      debug: process.env.NODE_ENV === 'development',
+      debug: false,
       enableClick: true,
     });
 
@@ -322,6 +322,6 @@ export function destroy() {
     flush();
 
     monitorInstance = null;
-    console.log('�� 监控实例已销毁');
+    console.log('��️ 监控实例已销毁');
   }
 }
