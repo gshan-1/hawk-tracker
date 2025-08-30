@@ -28,6 +28,10 @@ type InternalOptions = {
   emit: (event: any) => void;
 };
 
+/**
+ * rrweb 录屏插件
+ * 用于集成 rrweb 录屏能力到 hawk-tracker
+ */
 export class RrwebPlugin extends BasePlugin {
   private options: InternalOptions;
   private events: any[] = [];

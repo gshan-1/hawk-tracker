@@ -1,15 +1,15 @@
 import { useCallback } from 'react';
-import { getMonitor, reportError, reportCustomEvent } from '../monitor';
+import { getMonitor, trackError, trackEvent } from '../monitor';
 
 export function useMonitor() {
   const monitor = getMonitor();
 
-  const trackError = useCallback((error: Error, extra?: any) => {
-    reportError(error, extra);
+  const trackErrorHandler = useCallback((error: Error, extra?: any) => {
+    trackError(error, extra);
   }, []);
 
-  const trackEvent = useCallback((eventName: string, data: any) => {
-    reportCustomEvent(eventName, data);
+  const trackEventHandler = useCallback((eventName: string, data: any) => {
+    trackEvent(eventName, data);
   }, []);
 
   const trackPageView = useCallback(
@@ -56,8 +56,8 @@ export function useMonitor() {
 
   return {
     monitor,
-    trackError,
-    trackEvent,
+    trackError: trackErrorHandler,
+    trackEvent: trackEventHandler,
     trackPageView,
     trackClick,
     trackPerformance,

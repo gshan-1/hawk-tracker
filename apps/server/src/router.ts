@@ -1,347 +1,273 @@
+import { gunzip, inflate, inflateRaw, brotliDecompress } from 'zlib';
+import { promisify } from 'util';
+
 const KoaRouter = require('@koa/router');
+const bodyParser = require('koa-bodyparser');
 
-// 定义数据存储类型
+const router = new KoaRouter();
+const apiRouter = new KoaRouter({ prefix: '/api' });
+
+// ========== 存储结构：按 projectId 分组 ==========
 interface DataStore {
-  events: any[];
-  errors: any[];
-  performance: any[];
-  behaviors: any[];
+  events: Record<string, any[]>;
+  errors: Record<string, any[]>;
+  performance: Record<string, any[]>;
+  behaviors: Record<string, any[]>;
 }
-
-// 从外部导入数据存储
 let dataStore: DataStore;
 
-// 延迟初始化数据存储
 function getDataStore(): DataStore {
   if (!dataStore) {
-    dataStore = {
-      events: [],
-      errors: [],
-      performance: [],
-      behaviors: [],
-    };
+    dataStore = { events: {}, errors: {}, performance: {}, behaviors: {} };
   }
   return dataStore;
 }
+function initProjectData(projectId: string) {
+  const s = getDataStore();
+  if (!s.events[projectId]) s.events[projectId] = [];
+  if (!s.errors[projectId]) s.errors[projectId] = [];
+  if (!s.performance[projectId]) s.performance[projectId] = [];
+  if (!s.behaviors[projectId]) s.behaviors[projectId] = [];
+}
 
-const router = new KoaRouter();
-
-// 基础路由
-router.get('/', (ctx: any) => {
-  ctx.body = {
-    message: 'Hawk Tracker Server',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-  };
-});
-
-// 健康检查
-router.get('/health', (ctx: any) => {
-  ctx.body = {
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-  };
-});
-
-// API路由组
-const apiRouter = new KoaRouter({ prefix: '/api' });
-
-// 通用数据接收端点 - SDK 会发送到这里
+// 主入口：不加 bodyParser，只读 index.ts 解析后的 body
 apiRouter.post('/', async (ctx: any) => {
-  try {
-    console.log('📦 收到请求头:', ctx.headers);
-    console.log('📦 请求体类型:', typeof ctx.request.body);
-    console.log('📦 请求体内容:', JSON.stringify(ctx.request.body, null, 2));
-    
-    const data = ctx.request.body;
-    console.log('📦 解析后的数据:', data);
+  const body: any = ctx.request?.body ?? {};
+  console.log('📦 收到 SDK 数据包:', typeof body, Object.keys(body || {}));
 
-    // 解析 SDK 发送的数据结构
-    const { dataQueue = [], baseInfo = {} } = data;
+  let dataQueue: any[] = [];
+  let baseInfo: any = {};
+  if (Array.isArray(body.dataQueue)) dataQueue = body.dataQueue;
+  else if (Array.isArray(body?.data?.dataQueue))
+    dataQueue = body.data.dataQueue;
+  else if (Array.isArray(body.queue)) dataQueue = body.queue;
+  baseInfo = body.baseInfo || body?.data?.baseInfo || {};
 
-    if (!Array.isArray(dataQueue)) {
-      ctx.status = 400;
-      ctx.body = {
-        success: false,
-        error: '数据格式错误：dataQueue 必须是数组',
-      };
-      return;
-    }
+  if (!Array.isArray(dataQueue)) {
+    ctx.status = 400;
+    ctx.body = { success: false, error: '数据格式错误：dataQueue 必须是数组' };
+    return;
+  }
 
-    // 处理数据队列中的每个项目
-    for (const item of dataQueue) {
-      const { type, subType, ...itemData } = item;
+  for (const item of dataQueue) {
+    if (!item) continue;
+    const { type, subType, ...itemData } = item;
+    const pid = String(item.projectId || subType?.projectId || 'default');
+    initProjectData(pid);
 
-      // 根据类型分发到不同的存储
-      switch (type) {
-        case 'error':
-          const errorData = {
-            ...itemData,
-            id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            receivedAt: new Date().toISOString(),
-            subType,
-            baseInfo,
-          };
-          getDataStore().errors.push(errorData);
-          console.log('❌ 处理错误数据:', errorData);
-          break;
-
-        case 'performance':
-          const perfData = {
-            ...itemData,
-            id: `perf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            receivedAt: new Date().toISOString(),
-            subType,
-            baseInfo,
-          };
-          getDataStore().performance.push(perfData);
-          console.log('⚡ 处理性能数据:', perfData);
-          break;
-
-        case 'behavior':
-          const behaviorData = {
-            ...itemData,
-            id: `behavior_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            receivedAt: new Date().toISOString(),
-            subType,
-            baseInfo,
-          };
-          getDataStore().behaviors.push(behaviorData);
-          console.log('🎯 处理行为数据:', behaviorData);
-          break;
-
-        default:
-          const eventData = {
-            ...itemData,
-            id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            receivedAt: new Date().toISOString(),
-            type,
-            subType,
-            baseInfo,
-          };
-          getDataStore().events.push(eventData);
-          console.log('📊 处理事件数据:', eventData);
-          break;
+    switch (type) {
+      case 'error': {
+        const rec = {
+          ...itemData,
+          projectId: pid,
+          id: `error_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          receivedAt: new Date().toISOString(),
+          subType,
+          baseInfo,
+        };
+        getDataStore().errors[pid]!.push(rec);
+        console.log('❌ 处理错误数据:', rec);
+        break;
+      }
+      case 'performance': {
+        const rec = {
+          ...itemData,
+          projectId: pid,
+          id: `perf_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          receivedAt: new Date().toISOString(),
+          subType,
+          baseInfo,
+        };
+        getDataStore().performance[pid]!.push(rec);
+        console.log('⚡ 处理性能数据:', rec);
+        break;
+      }
+      case 'behavior': {
+        const rec = {
+          ...itemData,
+          projectId: pid,
+          id: `behavior_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          receivedAt: new Date().toISOString(),
+          subType,
+          baseInfo,
+        };
+        getDataStore().behaviors[pid]!.push(rec);
+        console.log('🎯 处理行为数据:', rec);
+        break;
+      }
+      default: {
+        const rec = {
+          ...itemData,
+          projectId: pid,
+          id: `event_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          receivedAt: new Date().toISOString(),
+          type,
+          subType,
+          baseInfo,
+        };
+        getDataStore().events[pid]!.push(rec);
+        console.log('📊 处理事件数据:', rec);
       }
     }
-
-    ctx.body = {
-      success: true,
-      message: `成功处理 ${dataQueue.length} 条数据`,
-      processed: dataQueue.length,
-    };
-  } catch (error) {
-    console.error('❌ 处理 SDK 数据失败:', error);
-    ctx.status = 500;
-    ctx.body = {
-      success: false,
-      error: '服务器内部错误',
-    };
   }
+
+  ctx.body = {
+    success: true,
+    message: `成功处理 ${dataQueue.length} 条数据`,
+    processed: dataQueue.length,
+  };
 });
 
-// 接收埋点数据
-apiRouter.post('/track', async (ctx: any) => {
-  try {
-    const data = ctx.request.body;
-    const eventData = {
-      ...data,
-      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      receivedAt: new Date().toISOString(),
-    };
-
-    getDataStore().events.push(eventData);
-    console.log('📊 收到埋点数据:', eventData);
-
-    ctx.body = {
-      success: true,
-      message: '数据接收成功',
-      dataId: eventData.id,
-    };
-  } catch (error) {
-    ctx.status = 400;
-    ctx.body = {
-      success: false,
-      error: '数据格式错误',
-    };
-  }
+// 其他端点使用 per-route bodyParser
+apiRouter.post('/error', bodyParser(), async (ctx: any) => {
+  const body = ctx.request?.body ?? {};
+  const pid = String(body.projectId || body.subType?.projectId || 'default');
+  initProjectData(pid);
+  const rec = {
+    ...body,
+    projectId: pid,
+    id: `error_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    receivedAt: new Date().toISOString(),
+  };
+  getDataStore().errors[pid]!.push(rec);
+  ctx.body = { success: true, message: '错误数据接收成功', dataId: rec.id };
 });
 
-// 接收错误数据
-apiRouter.post('/error', async (ctx: any) => {
-  try {
-    const data = ctx.request.body;
-    const errorData = {
-      ...data,
-      id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      receivedAt: new Date().toISOString(),
-    };
-
-    getDataStore().errors.push(errorData);
-    console.log('❌ 收到错误数据:', errorData);
-
-    ctx.body = {
-      success: true,
-      message: '错误数据接收成功',
-      dataId: errorData.id,
-    };
-  } catch (error) {
-    ctx.status = 400;
-    ctx.body = {
-      success: false,
-      error: '数据格式错误',
-    };
-  }
+apiRouter.post('/performance', bodyParser(), async (ctx: any) => {
+  const body = ctx.request?.body ?? {};
+  const pid = String(body.projectId || body.subType?.projectId || 'default');
+  initProjectData(pid);
+  const rec = {
+    ...body,
+    projectId: pid,
+    id: `perf_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    receivedAt: new Date().toISOString(),
+  };
+  getDataStore().performance[pid]!.push(rec);
+  ctx.body = { success: true, message: '性能数据接收成功', dataId: rec.id };
 });
 
-// 接收性能数据
-apiRouter.post('/performance', async (ctx: any) => {
-  try {
-    const data = ctx.request.body;
-    const perfData = {
-      ...data,
-      id: `perf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      receivedAt: new Date().toISOString(),
-    };
-
-    getDataStore().performance.push(perfData);
-    console.log('⚡ 收到性能数据:', perfData);
-
-    ctx.body = {
-      success: true,
-      message: '性能数据接收成功',
-      dataId: perfData.id,
-    };
-  } catch (error) {
-    ctx.status = 400;
-    ctx.body = {
-      success: false,
-      error: '数据格式错误',
-    };
-  }
+apiRouter.post('/behavior', bodyParser(), async (ctx: any) => {
+  const body = ctx.request?.body ?? {};
+  const pid = String(body.projectId || body.subType?.projectId || 'default');
+  initProjectData(pid);
+  const rec = {
+    ...body,
+    projectId: pid,
+    id: `behavior_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    receivedAt: new Date().toISOString(),
+  };
+  getDataStore().behaviors[pid]!.push(rec);
+  ctx.body = { success: true, message: '用户行为数据接收成功', dataId: rec.id };
 });
 
-// 接收用户行为数据
-apiRouter.post('/behavior', async (ctx: any) => {
-  try {
-    const data = ctx.request.body;
-    const behaviorData = {
-      ...data,
-      id: `behavior_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      receivedAt: new Date().toISOString(),
-    };
-
-    getDataStore().behaviors.push(behaviorData);
-    console.log('🎯 收到用户行为数据:', behaviorData);
-
-    ctx.body = {
-      success: true,
-      message: '用户行为数据接收成功',
-      dataId: behaviorData.id,
-    };
-  } catch (error) {
-    ctx.status = 400;
-    ctx.body = {
-      success: false,
-      error: '数据格式错误',
-    };
-  }
+apiRouter.post('/track', bodyParser(), async (ctx: any) => {
+  const body = ctx.request?.body ?? {};
+  const pid = String(body.projectId || body.subType?.projectId || 'default');
+  initProjectData(pid);
+  const rec = {
+    ...body,
+    projectId: pid,
+    id: `event_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    receivedAt: new Date().toISOString(),
+  };
+  getDataStore().events[pid]!.push(rec);
+  ctx.body = { success: true, message: '数据接收成功', dataId: rec.id };
 });
 
-// 获取所有数据（供前端查询）
+// ========== 查询与统计 ==========
 apiRouter.get('/data', async (ctx: any) => {
-  const { type = 'all', limit = 100, page = 1 } = ctx.query;
+  const { type = 'all', limit = 100, page = 1, projectId } = ctx.query ?? {};
+  const s = getDataStore();
+  const pid = projectId ? String(projectId) : undefined;
+
+  const pickAll = (m: Record<string, any[]>) => Object.values(m).flat();
+  const pickPid = (m: Record<string, any[]>) =>
+    pid ? (m[pid] ?? []) : pickAll(m);
 
   let data: any[] = [];
-  let total = 0;
-  const store = getDataStore();
-
   switch (type) {
     case 'events':
-      data = store.events;
+      data = pickPid(s.events);
       break;
     case 'errors':
-      data = store.errors;
+      data = pickPid(s.errors);
       break;
     case 'performance':
-      data = store.performance;
+      data = pickPid(s.performance);
       break;
     case 'behaviors':
-      data = store.behaviors;
+      data = pickPid(s.behaviors);
       break;
     default:
       data = [
-        ...store.events.map((item: any) => ({ ...item, type: 'event' })),
-        ...store.errors.map((item: any) => ({ ...item, type: 'error' })),
-        ...store.performance.map((item: any) => ({
-          ...item,
-          type: 'performance',
-        })),
-        ...store.behaviors.map((item: any) => ({ ...item, type: 'behavior' })),
+        ...pickPid(s.events).map((x) => ({ ...x, type: 'event' })),
+        ...pickPid(s.errors).map((x) => ({ ...x, type: 'error' })),
+        ...pickPid(s.performance).map((x) => ({ ...x, type: 'performance' })),
+        ...pickPid(s.behaviors).map((x) => ({ ...x, type: 'behavior' })),
       ];
   }
 
-  // 按时间倒序排列
   data.sort(
     (a, b) =>
       new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime(),
   );
-
-  total = data.length;
-
-  // 分页
-  const start = (parseInt(page as string) - 1) * parseInt(limit as string);
-  const end = start + parseInt(limit as string);
-  const paginatedData = data.slice(start, end);
+  const total = data.length;
+  const start = (parseInt(String(page)) - 1) * parseInt(String(limit));
+  const end = start + parseInt(String(limit));
 
   ctx.body = {
     success: true,
     data: {
-      list: paginatedData,
+      list: data.slice(start, end),
       total,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string),
-      totalPages: Math.ceil(total / parseInt(limit as string)),
+      page: parseInt(String(page)),
+      limit: parseInt(String(limit)),
+      totalPages: Math.ceil(total / parseInt(String(limit))),
     },
   };
 });
 
-// 获取统计数据
 apiRouter.get('/stats', async (ctx: any) => {
-  const store = getDataStore();
+  const { projectId } = ctx.query ?? {};
+  const s = getDataStore();
+  const pid = projectId ? String(projectId) : undefined;
+  const pick = (m: Record<string, any[]>) =>
+    pid ? (m[pid] ?? []) : Object.values(m).flat();
   const stats = {
-    events: store.events.length,
-    errors: store.errors.length,
-    performance: store.performance.length,
-    behaviors: store.behaviors.length,
+    events: pick(s.events).length,
+    errors: pick(s.errors).length,
+    performance: pick(s.performance).length,
+    behaviors: pick(s.behaviors).length,
     total:
-      store.events.length +
-      store.errors.length +
-      store.performance.length +
-      store.behaviors.length,
+      pick(s.events).length +
+      pick(s.errors).length +
+      pick(s.performance).length +
+      pick(s.behaviors).length,
   };
-
-  ctx.body = {
-    success: true,
-    data: stats,
-  };
+  ctx.body = { success: true, data: stats };
 });
 
-// 清空数据（开发用）
+// 清空（支持按项目）
 apiRouter.delete('/data', async (ctx: any) => {
-  const store = getDataStore();
-  store.events = [];
-  store.errors = [];
-  store.performance = [];
-  store.behaviors = [];
-
-  ctx.body = {
-    success: true,
-    message: '数据已清空',
-  };
+  const { projectId } = ctx.query ?? {};
+  const s = getDataStore();
+  if (projectId) {
+    const pid = String(projectId);
+    s.events[pid] = [];
+    s.errors[pid] = [];
+    s.performance[pid] = [];
+    s.behaviors[pid] = [];
+    ctx.body = { success: true, message: `项目 ${pid} 的数据已清空` };
+  } else {
+    s.events = {};
+    s.errors = {};
+    s.performance = {};
+    s.behaviors = {};
+    ctx.body = { success: true, message: '所有数据已清空' };
+  }
 });
 
-// 使用API路由
 router.use(apiRouter.routes());
 router.use(apiRouter.allowedMethods());
 

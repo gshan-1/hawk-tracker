@@ -1,18 +1,9 @@
-import { Outlet, useParams, Link, useLocation } from 'react-router-dom';
+import { Outlet, useParams, NavLink } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { MockAPI, Project } from '../../../../api/mockAPI';
 
 export default function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
-
-  // 检查是否在Router上下文中
-  let location;
-  try {
-    location = useLocation();
-  } catch (error) {
-    // 如果不在Router上下文中，使用默认值
-    location = { pathname: window.location.pathname };
-  }
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -59,22 +50,20 @@ export default function ProjectLayout() {
           <div className="p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-6">项目导航</h2>
             <nav className="space-y-2">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                      ? 'bg-blue-100 text-blue-700'
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                  >
-                    <span className="mr-3">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                );
-              })}
+                    }`
+                  }
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  {item.label}
+                </NavLink>
+              ))}
             </nav>
           </div>
         </div>

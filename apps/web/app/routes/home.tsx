@@ -40,7 +40,7 @@ function HomeContent() {
         </div>
       </nav>
 
-      <DashboardPage />
+      <Welcome />
     </div>
   );
 }

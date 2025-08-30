@@ -29,16 +29,28 @@ export default function ProjectOverviewPage() {
       if (!projectId) return;
       
       try {
-        // 获取统计数据
-        const statsResponse = await fetch('http://localhost:3001/api/stats');
+        // 获取统计数据（带 projectId）
+        const statsResponse = await fetch(`http://localhost:3001/api/stats?projectId=${projectId}`);
         const statsData = await statsResponse.json();
-        
-        // 获取最近的数据
-        const dataResponse = await fetch('http://localhost:3001/api/data?limit=10');
+
+        // 用 /data 的 total 作为“错误数量”（与错误日志页一致）
+        const errorsCountRes = await fetch(
+          `http://localhost:3001/api/data?type=errors&projectId=${projectId}&limit=1`,
+        );
+        const errorsCountJson = await errorsCountRes.json();
+        const errorsTotal = errorsCountJson?.data?.total ?? 0;
+
+        // 获取该项目最近数据
+        const dataResponse = await fetch(
+          `http://localhost:3001/api/data?projectId=${projectId}&limit=10`,
+        );
         const dataResult = await dataResponse.json();
-        
-        setStats(statsData.data);
-        setRecentData(dataResult.data.list || []);
+
+        setStats({
+          ...(statsData?.data || { events: 0, errors: 0, performance: 0, behaviors: 0, total: 0 }),
+          errors: errorsTotal, // 覆盖为与错误日志相同的口径
+        });
+        setRecentData(dataResult?.data?.list || []);
       } catch (error) {
         console.error('获取监控数据失败:', error);
       } finally {
@@ -47,8 +59,7 @@ export default function ProjectOverviewPage() {
     };
 
     fetchData();
-    
-    // 每30秒刷新一次数据
+    // 每30秒刷新一次
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [projectId]);

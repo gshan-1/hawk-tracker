@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hawk Tracker - 性能监控演示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .demo-section h3 {
+            color: #555;
+            margin-top: 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .performance-info {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error-btn {
+            background-color: #dc3545;
+        }
+        .error-btn:hover {
+            background-color: #c82333;
+        }
+        .performance-btn {
+            background-color: #28a745;
+        }
+        .performance-btn:hover {
+            background-color: #218838;
+        }
+        .resource-btn {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .resource-btn:hover {
+            background-color: #e0a800;
+        }
+        .webvitals-btn {
+            background-color: #17a2b8;
+        }
+        .webvitals-btn:hover {
+            background-color: #138496;
+        }
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .metric-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .metric-value {
+            color: #007bff;
+            font-family: monospace;
+        }
+        .metric-good {
+            color: #28a745;
+        }
+        .metric-warning {
+            color: #ffc107;
+        }
+        .metric-bad {
+            color: #dc3545;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            background: #f8f9fa;
+        }
+        .tab.active {
+            background: white;
+            border-color: #ddd;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .resource-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .resource-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-size: 12px;
+        }
+        .resource-item:last-child {
+            border-bottom: none;
+        }
+        .summary-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #007bff;
+        }
+        .summary-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .type-breakdown {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        .type-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            padding: 3px 0;
+        }
+        .type-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .type-value {
+            color: #007bff;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Hawk Tracker - 性能监控演示</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('navigation')">页面加载性能</div>
+            <div class="tab" onclick="switchTab('webvitals')">Web Vitals</div>
+            <div class="tab" onclick="switchTab('resources')">资源加载</div>
+            <div class="tab" onclick="switchTab('testing')">功能测试</div>
+        </div>
+
+        <div id="navigation" class="tab-content active">
+            <div class="demo-section">
+                <h3>页面加载性能指标</h3>
+                <p>页面加载时会自动收集以下性能数据：</p>
+                <ul>
+                    <li>页面加载时间 (Load Time)</li>
+                    <li>DOM 内容加载时间 (DOM Content Loaded)</li>
+                    <li>首次绘制时间 (First Paint)</li>
+                    <li>首次内容绘制时间 (First Contentful Paint)</li>
+                    <li>DNS 查询时间</li>
+                    <li>TCP 连接时间</li>
+                    <li>请求响应时间</li>
+                    <li>DOM 解析时间</li>
+                    <li>DOM 就绪时间</li>
+                </ul>
+                <div class="performance-info" id="navigationInfo">
+                    <strong>性能数据将在页面加载完成后显示...</strong>
+                </div>
+            </div>
+        </div>
+
+        <div id="webvitals" class="tab-content">
+            <div class="demo-section">
+                <h3>Web Vitals 核心指标</h3>
+                <p>实时监控用户体验的核心指标：</p>
+                <ul>
+                    <li>LCP (Largest Contentful Paint) - 最大内容绘制</li>
+                    <li>FID (First Input Delay) - 首次输入延迟</li>
+                    <li>CLS (Cumulative Layout Shift) - 累积布局偏移</li>
+                </ul>
+                <div class="performance-info" id="webVitalsInfo">
+                    <strong>Web Vitals 数据将在用户交互后显示...</strong>
+                </div>
+            </div>
+        </div>
+
+        <div id="resources" class="tab-content">
+            <div class="demo-section">
+                <h3>资源加载性能</h3>
+                <p>监控页面中各种资源的加载性能：</p>
+                <ul>
+                    <li>JavaScript 文件</li>
+                    <li>CSS 样式文件</li>
+                    <li>图片资源</li>
+                    <li>API 请求</li>
+                </ul>
+                
+                <!-- 新增：资源加载汇总统计 -->
+                <div class="performance-info" id="resourceSummary">
+                    <div class="summary-title">资源加载汇总统计</div>
+                    <div class="metric-item">
+                        <span class="metric-label">总资源数量：</span>
+                        <span class="metric-value" id="totalResources">计算中...</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">总下载字节数：</span>
+                        <span class="metric-value" id="totalBytes">计算中...</span>
+                    </div>
+                </div>
+                
+                <div class="performance-info" id="resourcesInfo">
+                    <strong>资源加载数据将实时更新...</strong>
+                </div>
+            </div>
+        </div>
+
+        <div id="testing" class="tab-content">
+            <div class="demo-section">
+                <h3>功能测试</h3>
+                <button id="errorBtn" class="error-btn">触发错误</button>
+                <button id="performanceBtn" class="performance-btn">手动收集性能数据</button>
+                <button id="resourceBtn" class="resource-btn">模拟资源加载</button>
+                <button id="webVitalsBtn" class="webvitals-btn">测试 Web Vitals</button>
+                <button id="heavyTaskBtn" class="performance-btn">模拟重任务</button>
+                <button id="resourceSummaryBtn" class="resource-btn">刷新资源统计</button>
+            </div>
+
+            <div class="demo-section">
+                <h3>控制台输出</h3>
+                <p>打开浏览器控制台查看详细的监控日志和上报数据。</p>
+                <div class="performance-info">
+                    <strong>可用的测试函数：</strong><br>
+                    • window.getPerformanceData() - 获取当前性能数据<br>
+                    • window.getResourceTimingData() - 获取资源加载数据<br>
+                    • window.getResourceSummary() - 获取资源汇总统计<br>
+                    • window.testPerformance() - 手动测试性能监控<br>
+                    • window.testError() - 手动测试错误监控<br>
+                    • window.hawkTracker - 访问 Hawk Tracker 实例
+                </div>
+            </div>
+    <title>Hawk Tracker Demo</title>
+    <link rel="stylesheet" href="./index.css">
+</head>
+<body>
+    <h1>Hawk Tracker 行为栈核心机制 Demo</h1>
+    <div class="row">
+        <button id="btn" class="warning">触发错误（ErrorPlugin）</button>
+        <button id="btn-custom">添加自定义事件</button>
+        <button id="btn-fetch" class="secondary">触发 fetch 请求</button>
+        <button id="btn-pushstate" class="secondary">history.pushState</button>
+        <button id="btn-hash" class="secondary">hashchange</button>
+        <button id="btn-clear" class="secondary">清空默认栈</button>
+        <button id="btn-render">立即刷新视图</button>
+    </div>
+
+    <div class="panel">
+        <div class="card">
+            <h3>默认栈统计（core 行为栈管理器）</h3>
+            <pre id="stats-core">{}</pre>
+        </div>
+        <div class="card">
+            <h3>插件栈统计（BehaviorPlugin）</h3>
+            <pre id="stats-plugin">{}</pre>
+        </div>
+        <div class="card">
+            <h3>默认栈快照（最近 10 条）</h3>
+            <pre id="snapshot-core">[]</pre>
+        </div>
+        <div class="card">
+            <h3>插件栈快照（最近 10 条）</h3>
+            <pre id="snapshot-plugin">[]</pre>
+        </div>
+    </div>
+
+    <script type="module" src="./index.js"></script>
+    <script>
+        // 标签页切换功能
+        function switchTab(tabName) {
+            // 隐藏所有标签内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 显示选中的标签内容
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 性能等级评估
+        function getPerformanceLevel(value, thresholds) {
+            if (value <= thresholds.good) return 'good';
+            if (value <= thresholds.warning) return 'warning';
+            return 'bad';
+        }
+
+        // 格式化时间
+        function formatTime(ms) {
+            if (ms === 0 || ms === undefined) return 'N/A'
+            return `${Math.round(ms)}ms`;
+        }
+
+        // 格式化字节数
+        function formatBytes(bytes) {
+            if (bytes === 0 || bytes === undefined) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 页面加载完成后显示性能信息
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                updateNavigationPerformance();
+                updateResourcePerformance();
+                updateResourceSummary();
+            }, 1000);
+        });
+
+        // 更新页面加载性能信息
+        function updateNavigationPerformance() {
+            const navigation = performance.getEntriesByType('navigation')[0];
+            const paintEntries = performance.getEntriesByType('paint');
+            
+            const firstPaint = paintEntries.find(entry => entry.name === 'first-paint');
+            const firstContentfulPaint = paintEntries.find(entry => entry.name === 'first-contentful-paint');
+            
+            const loadTime = navigation.loadEventEnd - navigation.fetchStart;
+            const domContentLoaded = navigation.domContentLoadedEventEnd - navigation.fetchStart;
+            const firstPaintTime = firstPaint ? firstPaint.startTime : 0;
+            const fcpTime = firstContentfulPaint ? firstContentfulPaint.startTime : 0;
+            
+            const navigationInfo = document.getElementById('navigationInfo');
+            navigationInfo.innerHTML = `
+                <strong>页面性能指标：</strong><br>
+                <div class="metric-item">
+                    <span class="metric-label">页面加载时间：</span>
+                    <span class="metric-value ${getPerformanceLevel(loadTime, {good: 2000, warning: 4000})}">${formatTime(loadTime)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">DOM 内容加载：</span>
+                    <span class="metric-value ${getPerformanceLevel(domContentLoaded, {good: 1000, warning: 2000})}">${formatTime(domContentLoaded)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">首次绘制：</span>
+                    <span class="metric-value ${getPerformanceLevel(firstPaintTime, {good: 800, warning: 1500})}">${formatTime(firstPaintTime)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">首次内容绘制：</span>
+                    <span class="metric-value ${getPerformanceLevel(fcpTime, {good: 1000, warning: 2000})}">${formatTime(fcpTime)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">DNS 查询时间：</span>
+                    <span class="metric-value">${formatTime(navigation.domainLookupEnd - navigation.domainLookupStart)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">TCP 连接时间：</span>
+                    <span class="metric-value">${formatTime(navigation.connectEnd - navigation.connectStart)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">请求响应时间：</span>
+                    <span class="metric-value">${formatTime(navigation.responseEnd - navigation.requestStart)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">DOM 解析时间：</span>
+                    <span class="metric-value">${formatTime(navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">DOM 就绪时间：</span>
+                    <span class="metric-value">${formatTime(navigation.domComplete - navigation.domContentLoadedEventEnd)}</span>
+                </div>
+            `;
+        }
+
+        // 新增：更新资源汇总统计
+        function updateResourceSummary() {
+            const resources = performance.getEntriesByType('resource');
+            
+            // 计算总资源数量和总字节数
+            const totalResources = resources.length;
+            const totalBytes = resources.reduce((sum, resource) => sum + (resource.transferSize || 0), 0);
+            
+            // 更新总统计显示
+            document.getElementById('totalResources').textContent = totalResources;
+            document.getElementById('totalBytes').textContent = formatBytes(totalBytes);
+            
+            console.log('资源汇总统计已更新：', {
+                totalResources,
+                totalBytes: formatBytes(totalBytes)
+            });
+        }
+
+        // 更新资源加载性能信息
+        function updateResourcePerformance() {
+            const resources = performance.getEntriesByType('resource');
+            const resourcesInfo = document.getElementById('resourcesInfo');
+            
+            const resourceStats = {
+                script: { count: 0, totalTime: 0 },
+                css: { count: 0, totalTime: 0 },
+                img: { count: 0, totalTime: 0 },
+                fetch: { count: 0, totalTime: 0 },
+                xmlhttprequest: { count: 0, totalTime: 0 },
+            };
+            
+            resources.forEach(resource => {
+                if (resourceStats[resource.initiatorType]) {
+                    resourceStats[resource.initiatorType].count++;
+                    resourceStats[resource.initiatorType].totalTime += resource.duration;
+                }
+            });
+            
+            let resourcesHtml = '<strong>资源加载统计：</strong><br>';
+            Object.entries(resourceStats).forEach(([type, stats]) => {
+                if (stats.count > 0) {
+                    const avgTime = stats.totalTime / stats.count;
+                    resourcesHtml += `
+                        <div class="metric-item">
+                            <span class="metric-label">${type.toUpperCase()} (${stats.count}个)：</span>
+                            <span class="metric-value">平均 ${formatTime(avgTime)}</span>
+                        </div>
+                    `;
+                }
+            });
+            
+            resourcesHtml += '<div class="resource-list">';
+            resources.slice(0, 10).forEach(resource => {
+                resourcesHtml += `
+                    <div class="resource-item">
+                        <strong>${resource.name.split('/').pop()}</strong> (${resource.initiatorType}) - ${formatTime(resource.duration)}
+                    </div>
+                `;
+            });
+            resourcesHtml += '</div>';
+            
+            resourcesInfo.innerHTML = resourcesHtml;
+        }
+
+        // 错误测试按钮
+        const errorBtn = document.getElementById('errorBtn');
+        errorBtn.addEventListener('click', () => {
+            try {
+                const obj = {};
+                obj.nonExistentMethod();
+            } catch (error) {
+                console.log('错误触发成功：', error);
+            }
+        });
+
+        // 性能测试按钮
+        const performanceBtn = document.getElementById('performanceBtn');
+        performanceBtn.addEventListener('click', () => {
+            console.log('手动触发性能数据收集...');
+            const perfData = window.getPerformanceData();
+            console.log('当前页面性能数据：', perfData);
+            
+            // 更新显示
+            updateNavigationPerformance();
+        });
+
+        // 资源加载测试按钮
+        const resourceBtn = document.getElementById('resourceBtn');
+        resourceBtn.addEventListener('click', () => {
+            console.log('模拟资源加载...');
+            const img = new Image();
+            img.src = 'https://via.placeholder.com/300x200?text=Test+Resource&t=' + Date.now();
+            img.onload = () => {
+                console.log('资源加载完成');
+                updateResourcePerformance();
+                updateResourceSummary(); // 同时更新汇总统计
+            };
+        });
+
+        // 新增：资源统计刷新按钮
+        const resourceSummaryBtn = document.getElementById('resourceSummaryBtn');
+        resourceSummaryBtn.addEventListener('click', () => {
+            console.log('刷新资源汇总统计...');
+            updateResourceSummary();
+        });
+
+        // Web Vitals 测试按钮
+        const webVitalsBtn = document.getElementById('webVitalsBtn');
+        webVitalsBtn.addEventListener('click', () => {
+            console.log('测试 Web Vitals...');
+            
+            // 模拟 LCP 变化
+            const testElement = document.createElement('div');
+            testElement.innerHTML = '<h2>这是测试的最大内容</h2>';
+            testElement.style.fontSize = '48px';
+            testElement.style.color = 'red';
+            document.body.appendChild(testElement);
+            
+            setTimeout(() => {
+                document.body.removeChild(testElement);
+            }, 2000);
+        });
+
+        // 重任务测试按钮
+        const heavyTaskBtn = document.getElementById('heavyTaskBtn');
+        heavyTaskBtn.addEventListener('click', () => {
+            console.log('模拟重任务...');
+            
+            // 模拟长时间运行的 JavaScript 任务
+            const startTime = performance.now();
+            let result = 0;
+            for (let i = 0; i < 10000000; i++) {
+                result += Math.sqrt(i);
+            }
+            const endTime = performance.now();
+            
+            console.log(`重任务完成，耗时: ${Math.round(endTime - startTime)}ms`);
+            
+            // 触发性能数据收集
+            const perfData = window.getPerformanceData();
+            console.log('重任务后的性能数据：', perfData);
+        });
+
+        // 添加全局测试函数
+        window.testPerformance = () => {
+            console.log('手动测试性能监控...');
+            const perfData = window.getPerformanceData();
+            console.log('性能数据：', perfData);
+            return perfData;
+        };
+
+        window.testError = () => {
+            console.log('手动测试错误监控...');
+            throw new Error('这是一个测试错误');
+        };
+
+        // 新增：全局资源汇总统计函数
+        window.getResourceSummary = () => {
+            const resources = performance.getEntriesByType('resource');
+            const summary = {
+                totalResources: resources.length,
+                totalBytes: resources.reduce((sum, resource) => sum + (resource.transferSize || 0), 0)
+            };
+            
+            return summary;
+        };
+
+        // 定期更新资源性能数据和汇总统计
+        setInterval(() => {
+            updateResourcePerformance();
+            updateResourceSummary();
+        }, 5000);
+
+        console.log('测试函数已添加到全局作用域：');
+        console.log('  - window.getPerformanceData() - 获取当前性能数据');
+        console.log('  - window.getResourceTimingData() - 获取资源加载数据');
+        console.log('  - window.getResourceSummary() - 获取资源汇总统计');
+        console.log('  - window.testPerformance() - 手动测试性能监控');
+        console.log('  - window.testError() - 手动测试错误监控');
+        console.log('  - window.hawkTracker - 访问 Hawk Tracker 实例');
+    </script>
+</body>
+</html>

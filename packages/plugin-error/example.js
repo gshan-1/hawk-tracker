@@ -9,6 +9,16 @@ import { ErrorPlugin } from '@hawk-tracker/plugin-error';
 import { RrwebPlugin } from '@hawk-tracker/plugin-rrweb';
 
 // 方式一：使用全局实例（推荐）
+init({
+  dsn: 'https://your-server.com/collect',
+  appId: 'my-vue-app',
+  version: '1.0.0',
+});
+
+// 注册错误处理器（不传参）
+Vue.config.errorHandler = createVueErrorHandler();
+
+// 方式二：传参方式
 const vueCore = init({
   dsn: 'https://your-server.com/collect',
   appId: 'my-vue-app',
@@ -178,9 +188,7 @@ const ErrorTestVue = {
         throw new Error('异步错误测试: ' + error.message);
       }
     },
-    testRecordingData() {
-      getRecordingData();
-    },
+
   },
 };
 

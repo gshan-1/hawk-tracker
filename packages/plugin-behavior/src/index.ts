@@ -219,6 +219,8 @@ export class BehaviorPlugin extends BasePlugin {
    * 处理网络请求事件
    */
   private handleNetworkEvent(event: any) {
+    const url = event.url || event.target?.responseURL || 'unknown';
+
     this.behaviorStack.addEvent({
       type: event.type || 'network_request',
       pageUrl: window.location.href,

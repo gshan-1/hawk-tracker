@@ -122,6 +122,7 @@ export class DataSender {
     subType: string,
     data: any,
     isImmediate: boolean = false,
+    priority: 'high' | 'normal' = 'high', // 添加优先级参数
   ): void {
     // 立即事件跳过采样过滤
     if (!isImmediate && Math.random() > this.config.sampleRate) {
@@ -137,10 +138,11 @@ export class DataSender {
       timestamp: Date.now(),
       retryCount: 0,
       eventId: generateUUID(),
+      priority, // 添加优先级字段
     } as any;
 
     // 立即事件插入队列头部，普通事件追加到尾部
-    if (isImmediate) {
+    if (isImmediate || priority === 'high') {
       this.queue.unshift(reportData);
       this.log('info', `Added immediate data to queue head:`, reportData);
       this.flush();
@@ -323,33 +325,49 @@ export class DataSender {
       throw new Error('Network is offline, suspending transport.');
     }
 
-    // 数据大小超过 64KB，sendBeacon 降级到 fetch
-    if (compressedPayload.length > 64 * 1024) {
-      this.log(
-        'warn',
-        `Payload size exceeds sendBeacon limit, falling back to fetch.`,
-      );
+    // 数据大小超过 64KB，直接 fetch
+    if (
+      typeof document !== 'undefined' &&
+      document.visibilityState === 'visible'
+    ) {
       const response = await fetch(this.config.dsn, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Content-Encoding': 'gzip',
-          'X-Hawk-SDK': '1', // 标记为 SDK 上报
+          'X-Hawk-SDK': '1',
         },
         body: compressedPayload as any,
       });
-
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    } else {
-      // 优先使用 sendBeacon
-      const success = (navigator as any).sendBeacon(
+      return;
+    }
+
+    // 先尝试 sendBeacon，失败则降级 fetch
+    let success = false;
+    try {
+      success = (navigator as any).sendBeacon(
         this.config.dsn,
         compressedPayload as any,
       );
-      if (!success) {
-        throw new Error('sendBeacon failed');
+    } catch (e) {
+      success = false;
+    }
+
+    if (!success) {
+      const response = await fetch(this.config.dsn, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Encoding': 'gzip',
+          'X-Hawk-SDK': '1',
+        },
+        body: compressedPayload as any,
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     }
   }

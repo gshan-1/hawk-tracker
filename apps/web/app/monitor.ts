@@ -215,8 +215,10 @@ export function trackError(error: Error, extra?: any) {
       timestamp: Date.now(),
       url: typeof window !== 'undefined' ? window.location.href : '',
       page: getCurrentPage(),
+      isImmediate: true, // 关键：立即上报优先级
       ...extra,
     });
+    flush();
   } catch (err) {
     console.error('❌ 错误上报失败:', err);
   }
@@ -320,6 +322,6 @@ export function destroy() {
     flush();
 
     monitorInstance = null;
-    console.log('�� 监控实例已销毁');
+    console.log('��️ 监控实例已销毁');
   }
 }
